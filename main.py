@@ -1,210 +1,60 @@
-"""Streamlit app to generate Tweets."""
-
-# Import from standard library
-import logging
-import random
-import re
-
-# Import from 3rd party libraries
 import streamlit as st
-import streamlit.components.v1 as components
-
-# Import modules
-import oai
-
-# Configure logger
-logging.basicConfig(format="\n%(asctime)s\n%(message)s", level=logging.INFO, force=True)
+import openai
+from io import BytesIO
+import tempfile
+import os
 
 
-# Define functions
-def generate_text(topic: str, mood: str = "", style: str = ""):
-    """Generate Tweet text."""
-    if st.session_state.n_requests >= 5:
-        st.session_state.text_error = (
-            "Too many requests. Please wait a few seconds before generating another Tweet."
-        )
-        logging.info(f"Session request limit reached: {st.session_state.n_requests}")
-        st.session_state.n_requests = 1
-        return
+# Create a function to transcribe audio using Whisper
+def transcribe_audio(api_key, audio_file):
+    openai.api_key = api_key
+    with BytesIO(audio_file.read()) as audio_bytes:
+        # Get the extension of the uloaded file
+        file_extension = os.path.splitext(audio_file.name)[-1]
+        
+        # Create a temporary file with the uploaded audio data and the correct extension
+        with tempfile.NamedTemporaryFile(delete=False, suffix=file_extension) as temp_audio_file:
+            temp_audio_file.write(audio_bytes.read())
+            temp_audio_file.seek(0)  # Move the file pointer to the beginning of the file
+            
+            # Transcribe the temporary audio file
+            transcript = openai.Audio.translate("whisper-1", temp_audio_file)
 
-    st.session_state.tweet = ""
-    st.session_state.image = ""
-    st.session_state.text_error = ""
+    return transcript
 
-    if not topic:
-        st.session_state.text_error = "Please enter a topic"
-        return
+# Create a function to summarize the transcript using a custom prompt
+def summarize_transcript(api_key, transcript, model):
+    openai.api_key = api_key
+    prompt = f"Please summarize the following audio transcription: {transcript}"
 
-    with text_spinner_placeholder:
-        with st.spinner("Please wait while your Tweet is being generated..."):
-            mood_prompt = f"{mood} " if mood else ""
-
-            prompt = f"Write a {mood_prompt}Tweet about {topic} in less than 120 characters:\n\n"
-
-            openai_connector = Openai()
-            flagged = openai_connector.moderate(prompt)
-            mood_output = f", Mood: {mood}" if mood else ""
-            style_output = f", Style: {style}" if style else ""
-            if flagged:
-                st.session_state.text_error = "Input flagged as inappropriate."
-                logging.info(f"Topic: {topic}{mood_output}{style_output}\n")
-                return
-
-            else:
-                st.session_state.text_error = ""
-                st.session_state.n_requests += 1
-                st.session_state.tweet = (
-                    openai_connector.complete(prompt, "gpt-3.5-turbo")
-                    .strip()
-                    .replace('"', "")
-                )
-                logging.info(
-                    f"Topic: {topic}{mood_output}{style_output}\n"
-                    f"Tweet: {st.session_state.tweet}"
-                )
-
-
-def generate_image(prompt: str):
-    """Generate Tweet image."""
-    if st.session_state.n_requests >= 5:
-        st.session_state.text_error = (
-            "Too many requests. Please wait a few seconds before generating another text or image."
-        )
-        logging.info(f"Session request limit reached: {st.session_state.n_requests}")
-        st.session_state.n_requests = 1
-        return
-
-    with image_spinner_placeholder:
-        with st.spinner("Please wait while your image is being generated..."):
-            openai_connector = Openai()
-            prompt_wo_hashtags = re.sub("#[A-Za-z0-9_]+", "", prompt)
-            processing_prompt = (
-                "Create a detailed but brief description of an image that captures "
-                f"the essence of the following text:\n{prompt_wo_hashtags}\n\n"
-            )
-            processed_prompt = (
-                openai_connector.complete(
-                    prompt=processing_prompt, temperature=0.5, max_tokens=40
-                )
-                .strip()
-                .replace('"', "")
-                .split(".")[0]
-                + "."
-            )
-            st.session_state.n_requests += 1
-            st.session_state.image = openai_connector.image(processed_prompt)
-            logging.info(f"Tweet: {prompt}\nImage prompt: {processed_prompt}")
-
-
-# Configure Streamlit page and state
-st.set_page_config(page_title="Tweet", page_icon="🤖")
-
-if "tweet" not in st.session_state:
-    st.session_state.tweet = ""
-if "image" not in st.session_state:
-    st.session_state.image = ""
-if "text_error" not in st.session_state:
-    st.session_state.text_error = ""
-if "image_error" not in st.session_state:
-    st.session_state.image_error = ""
-if "feeling_lucky" not in st.session_state:
-    st.session_state.feeling_lucky = False
-if "n_requests" not in st.session_state:
-    st.session_state.n_requests = 0
-
-# Force responsive layout for columns also on mobile
-st.write(
-    """<style>
-    [data-testid="column"] {
-        width: calc(50% - 1rem);
-        flex: 1 1 calc(50% - 1rem);
-        min-width: calc(50% - 1rem);
-    }
-    </style>""",
-    unsafe_allow_html=True,
-)
-
-# Render Streamlit page
-st.title("Generate Tweets")
-st.markdown(
-    "This mini-app generates Tweets using OpenAI's GPT-3 based [Davinci model](https://beta.openai.com/docs/models/overview) for texts and [DALL·E](https://beta.openai.com/docs/guides/images) for images. You can find the code on [GitHub](https://github.com/kinosal/tweet) and the author on [Twitter](https://twitter.com/_StanGirard)."
-)
-open_api_key = st.text_input(label="OpenAI API Key", type="password", key="api_key")
-
-topic = st.text_input(label="Topic (or hashtag)", placeholder="AI")
-mood = st.text_input(
-    label="Mood (e.g. inspirational, funny, serious) (optional)",
-    placeholder="inspirational",
-)
-style = st.text_input(
-    label="Twitter account handle to style-copy recent Tweets (optional)",
-    placeholder="elonmusk",
-)
-col1, col2 = st.columns(2)
-with col1:
-    st.session_state.feeling_lucky = not st.button(
-        label="Generate text",
-        type="primary",
-        on_click=generate_text,
-        args=(topic, mood, style),
+    response = openai.ChatCompletion.create(
+        model=model,
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.5,
+        max_tokens=150,
     )
-with col2:
-    with open("moods.txt") as f:
-        sample_moods = f.read().splitlines()
-    st.session_state.feeling_lucky = st.button(
-        label="Feeling lucky",
-        type="secondary",
-        on_click=generate_text,
-        args=("an interesting topic", random.choice(sample_moods), ""),
-    )
+    
+    summary = response['choices'][0]['message']['content']
+    return summary
 
-text_spinner_placeholder = st.empty()
-if st.session_state.text_error:
-    st.error(st.session_state.text_error)
+# Streamlit app
+st.title("Audio Transcription and Summarization")
+st.write("Upload an audio file, transcribe it using Whisper, and summarize the transcription using your selected model.")
 
-if st.session_state.tweet:
-    st.markdown("""---""")
-    st.text_area(label="Tweet", value=st.session_state.tweet, height=100)
-    col1, col2 = st.columns(2)
-    with col1:
-        components.html(
-            f"""
-                <a href="https://twitter.com/share?ref_src=twsrc%5Etfw" class="twitter-share-button" data-size="large" data-text="{st.session_state.tweet}\n - Tweet generated via" data-url="https://tweets.streamlit.app" data-show-count="false">Tweet</a><script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
-            """,
-            height=45,
-        )
-    with col2:
-        if st.session_state.feeling_lucky:
-            st.button(
-                label="Regenerate text",
-                type="secondary",
-                on_click=generate_text,
-                args=("an interesting topic", random.choice(sample_moods), ""),
-            )
-        else:
-            st.button(
-                label="Regenerate text",
-                type="secondary",
-                on_click=generate_text,
-                args=(topic, mood, style),
-            )
+api_key = st.text_input("Enter your OpenAI API key:", type="password")
+models = ["gpt-3.5-turbo", "gpt-4"]
+model = st.selectbox("Select a model:", models)
 
-    if not st.session_state.image:
-        st.button(
-            label="Generate image",
-            type="primary",
-            on_click=generate_image,
-            args=[st.session_state.tweet],
-        )
+uploaded_audio = st.file_uploader("Upload an audio file", type=['m4a', 'mp3', 'webm', 'mp4', 'mpga', 'wav', 'mpeg'], accept_multiple_files=False)
+
+if uploaded_audio:
+    if api_key:
+        st.write("Transcribing the audio...")
+        transcript = transcribe_audio(api_key, uploaded_audio)
+        st.write("Transcription:", transcript)
+
+        st.write("Summarizing the transcription...")
+        summary = summarize_transcript(api_key, transcript, model)
+        st.write("Summary:", summary)
     else:
-        st.image(st.session_state.image)
-        st.button(
-            label="Regenerate image",
-            type="secondary",
-            on_click=generate_image,
-            args=[st.session_state.tweet],
-        )
-
-    image_spinner_placeholder = st.empty()
-    if st.session_state.image_error:
-        st.error(st.session_state.image_error)
+        st.error("Please enter a valid OpenAI API key.")
