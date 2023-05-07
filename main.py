@@ -41,8 +41,19 @@ def summarize_transcript(api_key, transcript, model, custom_prompt=None):
     return summary
 
 # Streamlit app
-st.set_page_config(page_title="Speech Digest", page_icon="🎙️")
-st.title("Audio Transcription and Summarization")
+st.set_page_config(
+    page_title="Speech Digest",
+    page_icon="🎙️",
+    layout="centered",
+    initial_sidebar_state="expanded",
+)
+
+
+
+title = """
+    <h1 style="color:#32CD32; font-family:sans-serif;">🎙️ Audio Transcription and Summarization 🎙️</h1>
+"""
+st.markdown(title, unsafe_allow_html=True)
 st.write("Upload an audio file, transcribe it using Whisper, and summarize the transcription using your selected model.")
 
 api_key = st.text_input("Enter your OpenAI API key:", type="password")
