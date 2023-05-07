@@ -114,8 +114,36 @@ elif step == "Image Generation":
         image_dalle = ""
         st.empty()
         with st.spinner("Generating Prompt for Image..."):
-                image_prompt = f"You are an expert Prompt Engineer, you role is to create a prompt that will be used by Dall-E to generate an image. Here are a few example of dall-e prompts: 3D render of a cute tropical fish in an aquarium on a dark blue background, digital art; An expressive oil painting of a basketball player dunking, depicted as an explosion of a nebula;A photo of a teddy bear on a skateboard in Times Square; I want you to generate a prompt that takes the essence of this article and generates an image that is relevant to the article. The article is about '{state['topic']}'."
+                image_prompt = f"You are an expert Prompt Engineer, you role is to create a prompt that will be used by Dall-E to generate an image. Here are a few example of dall-e prompts: 3D render of a cute tropical fish in an aquarium on a dark blue background, digital art; An expressive oil painting of a basketball player dunking, depicted as an explosion of a nebula;A photo of a teddy bear on a skateboard in Times Square; I want you to generate a prompt that takes the essence of this article and generates an image that is relevant to the article.You MUST not use technical terms and everything should be explained with simple words that a 10 years old could understand. The article is about '{state['topic']}'."
                 image_dalle = call_gpt_streaming(api_key,image_prompt, model)
         with st.spinner("Generating image..."):
             image_url = generate_image(api_key, image_dalle)
             st.image(image_url)
+
+
+
+
+st.markdown(
+    """
+    ---
+    ### Source code and contact information
+    - The source code for this app can be found on GitHub: [SpeechDigest](https://github.com/StanGirard/speechdigest)
+    - If you have any questions or comments, feel free to reach out to me on Twitter: [@_StanGirard](https://twitter.com/_StanGirard)
+    """
+)
+
+col1, col2 = st.columns(2)
+
+with col1:
+    st.markdown(
+        """
+        [![Tweet](https://img.shields.io/twitter/url?url=https%3A%2F%2Fgithub.com%2FStanGirard%2Fspeechdigest)](https://twitter.com/intent/tweet?url=https://github.com/StanGirard/speechdigest&text=Check%20out%20this%20awesome%20Speech%20Digest%20app%20built%20with%20Streamlit!%20%23speechdigest%20%23streamlit)
+        """
+    )
+
+with col2:
+    st.markdown(
+        """
+        [![GitHub Stars](https://img.shields.io/github/stars/StanGirard/speechdigest?style=social)](https://github.com/StanGirard/speechdigest/stargazers)
+        """
+    )
