@@ -37,3 +37,29 @@ def summarize_transcript(api_key, transcript, model, custom_prompt=None):
     
     summary = response['choices'][0]['message']['content']
     return summary
+
+
+def generate_image_prompt(api_key, user_input):
+    openai.api_key = api_key
+
+    response = openai.ChatCompletion.create(
+        model="gpt-4",
+        messages=[{"role": "user", "content": f"Create a text that explains in a lot of details how the meme about this topic would look like: {user_input}"}],
+        temperature=0.7,
+        max_tokens=50,
+    )
+
+    return response['choices'][0]['message']['content']
+
+def generate_image(api_key, prompt):
+    openai.api_key = api_key
+
+    response = openai.Image.create(
+        model="image-alpha-001",
+        prompt=prompt,
+        n=1,
+        size="256x256",
+        response_format="url",
+    )
+
+    return response['data'][0]['url']
