@@ -23,9 +23,12 @@ def transcribe_audio(api_key, audio_file):
     return transcript
 
 # Create a function to summarize the transcript using a custom prompt
-def summarize_transcript(api_key, transcript, model):
+def summarize_transcript(api_key, transcript, model, custom_prompt=None):
     openai.api_key = api_key
     prompt = f"Please summarize the following audio transcription: {transcript}"
+    if custom_prompt:
+        prompt = f"{custom_prompt}\n\n{transcript}"
+    
 
     response = openai.ChatCompletion.create(
         model=model,
@@ -48,19 +51,27 @@ model = st.selectbox("Select a model:", models)
 
 uploaded_audio = st.file_uploader("Upload an audio file", type=['m4a', 'mp3', 'webm', 'mp4', 'mpga', 'wav', 'mpeg'], accept_multiple_files=False)
 
+custom_prompt = None
 
-if uploaded_audio:
-    if api_key:
-        st.markdown("Transcribing the audio...")
-        transcript = transcribe_audio(api_key, uploaded_audio)
-        st.markdown(f"###  Transcription:\n\n<details><summary>Click to view</summary><p><pre><code>{transcript}</code></pre></p></details>", unsafe_allow_html=True)
+custom_prompt = st.text_input("Enter a custom prompt:", value = "Summarize the following audio transcription:")
 
-        st.markdown("Summarizing the transcription...")
-        summary = summarize_transcript(api_key, transcript, model)
-        st.markdown(f"### Summary:")
-        st.write(summary)
-    else:
-        st.error("Please enter a valid OpenAI API key.")
+if st.button("Generate Summary"):
+    if uploaded_audio:
+        if api_key:
+            st.markdown("Transcribing the audio...")
+            transcript = transcribe_audio(api_key, uploaded_audio)
+            st.markdown(f"###  Transcription:\n\n<details><summary>Click to view</summary><p><pre><code>{transcript.text}</code></pre></p></details>", unsafe_allow_html=True)
+
+            st.markdown("Summarizing the transcription...")
+            if custom_prompt:
+                summary = summarize_transcript(api_key, transcript, model, custom_prompt)
+            else:
+                summary = summarize_transcript(api_key, transcript, model)
+                
+            st.markdown(f"### Summary:")
+            st.write(summary)
+        else:
+            st.error("Please enter a valid OpenAI API key.")
 
 
 st.markdown(
