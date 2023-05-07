@@ -2,6 +2,7 @@ import openai
 from io import BytesIO
 import tempfile
 import os
+import streamlit as st
 
 # Create a function to transcribe audio using Whisper
 def transcribe_audio(api_key, audio_file):
@@ -19,6 +20,39 @@ def transcribe_audio(api_key, audio_file):
             transcript = openai.Audio.translate("whisper-1", temp_audio_file)
 
     return transcript
+
+def call_gpt(api_key, prompt, model):
+    openai.api_key = api_key
+    response = openai.ChatCompletion.create(
+        model=model,
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.5,
+        max_tokens=400,
+    )
+    
+    return response['choices'][0]['message']['content']
+
+def call_gpt_streaming(api_key,prompt, model):
+    openai.api_key = api_key
+    response = openai.ChatCompletion.create(
+        model=model,
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.7,
+        stream=True
+    )
+
+    collected_events = []
+    completion_text = ''
+    placeholder = st.empty()
+
+    for event in response:
+        collected_events.append(event)
+        # Check if content key exists
+        if "content" in event['choices'][0]["delta"]:
+            event_text = event['choices'][0]["delta"]["content"]
+            completion_text += event_text
+            placeholder.write(completion_text)  # Write the received text
+    return completion_text
 
 # Create a function to summarize the transcript using a custom prompt
 def summarize_transcript(api_key, transcript, model, custom_prompt=None):
