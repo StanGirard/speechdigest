@@ -1,2 +1,3 @@
 .venv/*
 whisper/*
+__pycache__/
