@@ -89,11 +89,22 @@ def generate_image(api_key, prompt):
     openai.api_key = api_key
 
     response = openai.Image.create(
-        model="image-alpha-001",
         prompt=prompt,
         n=1,
-        size="256x256",
+        size="512x512",
         response_format="url",
     )
 
     return response['data'][0]['url']
+
+def generate_images(api_key, prompt, n=4):
+    openai.api_key = api_key
+
+    response = openai.Image.create(
+        prompt=prompt,
+        n=n,
+        size="256x256",
+        response_format="url",
+    )
+
+    return response['data']
