@@ -16,7 +16,7 @@ st.markdown(title, unsafe_allow_html=True)
 st.write("Upload an audio file, transcribe it using Whisper, and summarize the transcription using your selected model.")
 
 api_key = st.text_input("Enter your OpenAI API key:", type="password")
-models = ["gpt-3.5-turbo", "gpt-4"]
+models = ["gpt-3.5-turbo", "gpt-3.5-turbo-16k", "gpt-4-0613"]
 model = st.selectbox("Select a model:", models)
 
 uploaded_audio = st.file_uploader("Upload an audio file", type=['m4a', 'mp3', 'webm', 'mp4', 'mpga', 'wav', 'mpeg'], accept_multiple_files=False)
